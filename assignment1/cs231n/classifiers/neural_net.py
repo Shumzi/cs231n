@@ -129,7 +129,7 @@ class TwoLayerNet(object):
         delta2 = softmax_unstable(scores)
         delta2[range(N),y] -= 1 # derivative of cost/z2.
         delta1 = delta2@W2.T # dcost/dz2 * dz2/dh1
-        delta1[z1<=0] = 0 # *= dh1/dz1 (i.e. max(0,z1).
+        delta1[z1<=0] = 0 # *= dh1/dz1 (i.e. max(0,z1). the chosen ones pass on as is.
         grads['W2'] = h1.T@delta2/N + 2*reg*W2
         grads['W1'] = X.T@delta1/N + 2*reg*W1
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
