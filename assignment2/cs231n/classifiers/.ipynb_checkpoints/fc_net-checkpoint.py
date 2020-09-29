@@ -55,12 +55,11 @@ class TwoLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        W1 = np.random.normal(scale=weight_scale,size=(input_dim,hidden_dim))
-        b1 = np.zeros(hidden_dim)
-        W2 = np.random.normal(scale=weight_scale,size=(hidden_dim,num_classes))
-        b2 = np.zeros(num_classes)
-        self.params.update([('W1',W1),('b1',b1),('W2',W2),('b2',b2)])
-
+        self.params['W1'] = np.random.normal(scale=weight_scale,size=(input_dim, hidden_dim))
+        self.params['b1'] = np.zeros(hidden_dim)
+        self.params['W2'] = np.random.normal(scale=weight_scale,size=(hidden_dim, num_classes))
+        self.params['b2'] = np.zeros(num_classes)
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -91,12 +90,19 @@ class TwoLayerNet(object):
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        W1,b1,W2,b2 = self.params['W1'],self.params['b1'],self.params['W2'],self.params['b2']
-        z1, affine_cache1 = affine_forward(X,W1,b1)
-        a1, relu_cache1 = relu_forward(z1)
-        z2, affine_cache2 = affine_forward(a1,W2,b2)
+        cache={}
+        reg_loss = 0
+        reg = self.reg
+        W1 = self.params['W1'] 
+        b1 = self.params['b1'] 
+        W2 = self.params['W2'] 
+        b2 = self.params['b2'] 
+        z1, cache['affine1'] = affine_forward(X,W1,b1)
+        reg_loss += 0.5*reg*(W1**2).sum()
+        a1, cache['relu1'] = relu_forward(z1)
+        z2, cache['affine2'] = affine_forward(a1,W2,b2)
+        reg_loss += 0.5*reg*(W2**2).sum()
         scores = z2
-
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -118,14 +124,14 @@ class TwoLayerNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        # "penalizing the squared magnitude of all parameters **directly** in the objective"
-        loss, dout = softmax_loss(z2,y)
-        loss +=  reg_loss(self.reg,W1,W2)
-        da1, grads['W2'], grads['b2'] = affine_backward(dout,affine_cache2)
-        grads['W2'] += self.reg*W2
-        dz1 = relu_backward(da1,relu_cache1)
-        _, grads['W1'], grads['b1'] = affine_backward(dz1,affine_cache1)
-        grads['W1'] += self.reg*W1
+
+        loss, dout = softmax_loss(scores,y)
+        loss += reg_loss
+        da2, grads['W2'], grads['b2'] = affine_backward(dout,cache['affine2'])
+        grads['W2'] += reg*W2
+        dz2 = relu_backward(da2, cache['relu1'])
+        _ ,grads['W1'],grads['b1'], = affine_backward(dz2,cache['affine1'])
+        grads['W1'] += reg*W1
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -203,25 +209,27 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.                               #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        for layer_num in range(self.num_layers): # weights are for input_layer as well as every hidden_layer. 
-            layer_name = str(layer_num+1)
-            if (layer_num == self.num_layers-1): # last layer, connect to class output.
-                self.params['W'+layer_name] = np.random.normal(scale = weight_scale, 
-                                                               size = (hidden_dims[layer_num-1], 
-                                                                       num_classes))
-                self.params['b' + layer_name] = np.zeros(num_classes)
+#         hidden_dims,
+#         input_dim=3 * 32 * 32,
+#         num_classes=10,
+        for num_layer in range(self.num_layers):
+            layer_name = str(num_layer+1)
+            if(num_layer == self.num_layers-1):
+                self.params['W'+layer_name] = np.random.normal(scale=weight_scale,
+                                                               size=(hidden_dims[num_layer-1],num_classes))
+                self.params['b'+layer_name] = np.zeros(num_classes)
             else:
-                if(0 == layer_num): # first layer, connect to input.
-                    self.params['W1'] = np.random.normal(scale=weight_scale, size=(input_dim, hidden_dims[0]))
+                if(0 == num_layer):
+                    self.params['W'+layer_name] = np.random.normal(scale=weight_scale,
+                                                                   size=(input_dim,hidden_dims[num_layer]))
                 else:
-                    self.params['W' + layer_name] = np.random.normal(scale = weight_scale, 
-                                                                     size = (hidden_dims[layer_num-1], 
-                                                                             hidden_dims[layer_num]))
-                self.params['b' + layer_name] = np.zeros(hidden_dims[layer_num])
-                if(self.normalization == 'batchnorm'):
-                    self.params['gamma'+layer_name] = 1
-                    self.params['beta'+layer_name] = 0
-            
+                    self.params['W'+layer_name] = np.random.normal(scale=weight_scale,
+                                                                   size=(hidden_dims[num_layer-1],
+                                                                         hidden_dims[num_layer]))
+                self.params['b'+layer_name] = np.zeros(hidden_dims[num_layer])
+            # if bn then self.params['gamma'+layer_name] = 1
+            # self.params['beta'+layer_name] = 0
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -243,7 +251,7 @@ class FullyConnectedNet(object):
         # pass of the second batch normalization layer, etc.
         self.bn_params = []
         if self.normalization == "batchnorm":
-            self.bn_params = [{"mode": "train"} for i in range(self.num_layers - 1)] # bn is only on the hidden_layers, so (-1) for inp_layer.
+            self.bn_params = [{"mode": "train"} for i in range(self.num_layers - 1)]
         if self.normalization == "layernorm":
             self.bn_params = [{} for i in range(self.num_layers - 1)]
 
@@ -281,41 +289,29 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        caches = {}
+        cache = {}
+        reg_loss = 0
         # {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
         x = X
-        reg_loss = 0
-        for layer_num in range(self.num_layers): # last affine will be done seperately.
-            layer_name = str(layer_num+1)
+        for num_layer in range(self.num_layers):
+            layer_name = str(num_layer+1)
             # affine forward
-            w = self.params['W'+layer_name]
-            b = self.params['b'+layer_name]
-            x, cache = affine_forward(x, w, b)
-            caches['affine_'+layer_name] = cache
-            reg_loss += (0.5*self.reg*(w**2)).sum()
-            if(layer_num == self.num_layers - 1): # finish early on last affine layer.
-                scores = x
-                continue
-            # bn/layer_norm forward?
+            x, cache['affine_'+layer_name] = affine_forward(x, self.params['W'+layer_name],
+                                                            self.params['b'+layer_name])
+            reg_loss +=0.5*self.reg*(self.params['W'+layer_name]**2).sum()
+            if num_layer == self.num_layers-1:
+                continue # skip over next forward passes.
+            #bn/ln forward?
             if self.normalization == 'batchnorm':
                 pass
-#                 gamma = self.params['gamma'+layer_name] 
-#                 beta = self.params['beta'+layer_name]
-#                 bn_param = self.bn_params[layer_num]
-#                 x, cache = batchnorm_forward(x, gamma, beta, bn_param)
-#                 caches['bnorm_'+layer_name] = cache
             elif self.normalization == 'layernorm':
                 pass
-            
             # relu forward
-            x, cache = relu_forward(x)
-            caches['relu_'+layer_name] = cache
-            
+            x, cache['relu_'+layer_name] = relu_forward(x)
             # dropout forward?
             if self.use_dropout:
                 pass
-#                 x, cache = dropout_forward(x, self.dropout_param)
-#                 caches['dropout_'+layer_name] = cache
+        scores = x
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -341,35 +337,32 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        loss, dout = softmax_loss(scores,y)
+        loss, dout = softmax_loss(scores, y)
         loss += reg_loss
         # {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
-        # in reverse order!
-        # last affine - backwards (is more complicated to understand when putting it into loop)
-        layer_name = str(self.num_layers)
-        dx, dw, db = affine_backward(dout,caches['affine_'+layer_name])
-        dw += self.reg * self.params['W'+layer_name]
-        grads['W'+layer_name] = dw
-        grads['b'+layer_name] = db
-        # {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) **[::-1]**
-        for layer_num in range(self.num_layers - 1)[::-1]: # backprop rest of layers.
-            layer_name = str(layer_num + 1)
-            # dropout back?
+        # in reverse!
+        # confusing if we include last affine, doing it seperately.
+        num_layer = (self.num_layers - 1)
+        layer_name = str(num_layer + 1)
+        dx, grads['W'+layer_name], grads['b'+layer_name] = affine_backward(dout,
+                                                                           cache['affine_'+layer_name])
+        grads['W' + layer_name] += self.reg*self.params['W'+layer_name]
+        for num_layer in range(self.num_layers-1)[::-1]:
+            layer_name = str(num_layer + 1)
+            # dropout backward?
             if self.use_dropout:
                 pass
-            # relu back
-            dx = relu_backward(dx,caches['relu_'+layer_name])
-            # bn/layer_norm back?
+            # relu backward
+            dx = relu_backward(dx,cache['relu_'+layer_name])
+            # bn/ln backward?
             if self.normalization == 'batchnorm':
                 pass
             elif self.normalization == 'layernorm':
                 pass
-            # affine back.
-            dx, dw, db = affine_backward(dx, caches['affine_'+layer_name])
-            dw += self.reg * self.params['W'+layer_name]
-            grads['W'+layer_name] = dw
-            grads['b'+layer_name] = db
-            
+            # affine backward
+            dx, grads['W'+layer_name], grads['b'+layer_name] = affine_backward(dx, cache['affine_'+layer_name])
+            grads['W' + layer_name] += self.reg * self.params['W' + layer_name]
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #

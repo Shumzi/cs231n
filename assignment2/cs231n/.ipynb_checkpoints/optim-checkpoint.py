@@ -68,10 +68,8 @@ def sgd_momentum(w, dw, config=None):
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    mu = config['momentum']
-    lr = config['learning_rate']
-    v = mu * v - lr * dw
-    next_w = w + v
+
+    pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -108,13 +106,9 @@ def rmsprop(w, dw, config=None):
     # config['cache'].                                                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    learning_rate = config['learning_rate']
-    decay_rate = config['decay_rate']
-    eps = config['epsilon']
-    cache = config['cache']
-    cache = decay_rate * cache + (1 - decay_rate) * dw**2
-    next_w = w - learning_rate * dw / (np.sqrt(cache) + eps) # i.e. if abs val over time is big (i.e. sensitive), then penalize more.
-    config['cache'] = cache
+
+    pass
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -157,25 +151,9 @@ def adam(w, dw, config=None):
     # using it in any calculations.                                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    learning_rate = config['learning_rate']
-    beta1 = config['beta1']
-    beta2 = config['beta2']
-    epsilon = config['epsilon']
-    m = config['m']
-    v = config['v']
-    t = config['t'] + 1
-    
-    # 1st and 2nd moment
-    m = beta1 * m + (1-beta1) * dw    
-    v = beta2 * v + (1-beta2) * (dw**2)
-    # bias correction, doesn't update the moving m&v though.
-    mt = m / (1 - beta1**t) # take dw less seriously as iter goes up. start off with just dw.
-    vt = v / (1 - beta2**t)
-    # final calc
-    next_w = w - learning_rate * mt / (np.sqrt(vt + epsilon))
-    config['m'] = m
-    config['v'] = v
-    config['t'] = t
+
+    pass
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

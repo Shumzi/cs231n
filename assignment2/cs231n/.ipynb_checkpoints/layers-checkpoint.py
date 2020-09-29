@@ -1,9 +1,7 @@
 from builtins import range
 import numpy as np
 
-def print_shapes(*arrays):
-    for array in arrays:
-        print(array.shape)
+
 
 def affine_forward(x, w, b):
     """
@@ -29,10 +27,9 @@ def affine_forward(x, w, b):
     # will need to reshape the input into rows.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    x_rav = x.reshape(x.shape[0],-1) # NxM
-#     print('x: ',x.shape,'\nw: ',w.shape,'\nb: ',b.shape)
+    x_rav = x.reshape(x.shape[0],-1)
     out = x_rav@w + b
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -63,13 +60,11 @@ def affine_backward(dout, cache):
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    dx = (dout@w.T).reshape(x.shape)
-    dw = x.reshape(x.shape[0],-1).T@dout
+    N,M = dout.shape
     db = dout.sum(axis=0)
-#     print('x: ',x.shape,'\nw: ',w.shape,'\nb: ',b.shape)
-#     print('dx: ',dx.shape,'\ndw: ',dw.shape,'\ndb: ',db.shape)
-#     print('dout: ',dout.shape)
+    dw = x.reshape(x.shape[0],-1).T@dout
+    dx = (dout@w.T).reshape(x.shape)
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -93,6 +88,7 @@ def relu_forward(x):
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
     out = np.maximum(0,x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -127,11 +123,8 @@ def relu_backward(dout, cache):
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return dx
-def reg_loss(reg, *weights):
-    loss = 0
-    for weight in weights:
-        loss += 0.5*reg*(weight**2).sum()
-    return loss
+
+
 def batchnorm_forward(x, gamma, beta, bn_param):
     """
     Forward pass for batch normalization.
@@ -202,14 +195,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # might prove to be helpful.                                          #
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        # based on algo. 1 of bn paper.
-        sample_mean = x.sum(axis=0)/N
-        running_mean = running_mean * momentum + (1 - momentum) * sample_mean
-        sample_var = ((x - sample_mean)**2).sum(axis=0)/N
-        running_var = running_var * momentum + (1 - momentum) * sample_var
-        x_norm = (x - sample_mean) /(np.sqrt(sample_var + eps))
-        out = gamma * x_norm + beta
-        cache = (sample_mean, sample_var, eps, x, x_norm, gamma) # note we don't need beta for grad computation.
+
+        pass
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -223,8 +211,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        x_norm = (x - running_mean) /(np.sqrt(running_var + eps))
-        out = gamma * x_norm + beta
+        pass
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -264,24 +252,9 @@ def batchnorm_backward(dout, cache):
     # might prove to be helpful.                                              #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    # init variables
-    N,D = dout.shape
-    sample_mean, sample_var, eps, x, x_norm, gamma = cache
-    # stage 1 in bn backprop
-    dgamma = (dout * x_norm).sum(axis = 0)
-    dbeta = dout.sum(axis=0)
-    dx_norm = dout * gamma
-    # init variables for stage 2
-    x_dist_from_mean = (x - sample_mean) # nom of x_norm
-    denominator = 1/np.sqrt(sample_var+eps) # denom of x_norm.
-    # stage 2 in bn backprop.
-    dvar = (dx_norm*x_dist_from_mean).sum(axis=0)
-    dvar *= -0.5*(denominator**3)
-    dmean = -dx_norm.sum(axis=0)*denominator
-    dmean += dvar*2*x_dist_from_mean.sum(axis=0)/N
-    dx = dx_norm*denominator
-    dx += dmean/N
-    dx += (2/N)*dvar*x_dist_from_mean
+
+    pass
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
