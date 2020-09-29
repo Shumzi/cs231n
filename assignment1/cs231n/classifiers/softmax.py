@@ -100,7 +100,7 @@ def softmax_loss_vectorized(W, X, y, reg):
     loss -= (np.log(correct_class_prob)).mean()
     prob[range(num_train),y] -= 1
     # dsoftmax = softmax_yi(delta-softmax_j), where delta = 1 if j=yi, else delta=0.
-    # and so dW = softmax_j - delta, delta as above.
+    # and so dW = d-log(softmax) = (softmax_j - delta_i)*x_i, delta as above. 
     # see https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
     # or just derive it yourself.
     dW += X.T@prob # fxn X nxc = fxc.
