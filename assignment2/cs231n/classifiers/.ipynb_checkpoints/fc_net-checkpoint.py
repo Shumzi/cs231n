@@ -227,8 +227,8 @@ class FullyConnectedNet(object):
                                                                    size=(hidden_dims[num_layer-1],
                                                                          hidden_dims[num_layer]))
                 self.params['b'+layer_name] = np.zeros(hidden_dims[num_layer])
-            # if bn then self.params['gamma'+layer_name] = 1
-            # self.params['beta'+layer_name] = 0
+            if bn then self.params['gamma'+layer_name] = 1
+                self.params['beta'+layer_name] = 0
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
