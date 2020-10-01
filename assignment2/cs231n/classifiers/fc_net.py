@@ -227,7 +227,7 @@ class FullyConnectedNet(object):
                                                                      size=(hidden_dims[num_layer - 1],
                                                                            hidden_dims[num_layer]))
                 self.params['b' + layer_name] = np.zeros(hidden_dims[num_layer])
-                if self.normalization == 'batchnorm': # since bn can't be on last layer anyway.
+                if self.normalization is not None: # since bn can't be on last layer anyway.
                     self.params['gamma' + layer_name] = np.ones(hidden_dims[num_layer])
                     self.params['beta' + layer_name] = np.zeros(hidden_dims[num_layer])
 
@@ -308,12 +308,14 @@ class FullyConnectedNet(object):
                                                                         self.params['beta' + layer_name],
                                                                         self.bn_params[num_layer])
             elif self.normalization == 'layernorm':
-                pass
+                x, cache['layernorm_' + layer_name] = layernorm_forward(x, self.params['gamma' + layer_name],
+                                                                        self.params['beta' + layer_name],
+                                                                        self.bn_params[num_layer])
             # relu forward
             x, cache['relu_' + layer_name] = relu_forward(x)
             # dropout forward?
             if self.use_dropout:
-                pass
+                x, cache['dropout_' + layer_name] = dropout_forward(x,self.dropout_param)
         scores = x
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -354,7 +356,7 @@ class FullyConnectedNet(object):
             layer_name = str(num_layer + 1)
             # dropout backward?
             if self.use_dropout:
-                pass
+                dx = dropout_backward(dx, cache['dropout_' + layer_name])
             # relu backward
             dx = relu_backward(dx, cache['relu_' + layer_name])
             # bn/ln backward?
@@ -362,7 +364,8 @@ class FullyConnectedNet(object):
                 dx, grads['gamma' + layer_name], grads['beta' + layer_name] = batchnorm_backward_alt(dx, cache[
                     'batchnorm_' + layer_name])
             elif self.normalization == 'layernorm':
-                pass
+                dx, grads['gamma' + layer_name], grads['beta' + layer_name] = layernorm_backward(dx, cache[
+                    'layernorm_' + layer_name])
             # affine backward
             dx, grads['W' + layer_name], grads['b' + layer_name] = affine_backward(dx, cache['affine_' + layer_name])
             grads['W' + layer_name] += self.reg * self.params['W' + layer_name]

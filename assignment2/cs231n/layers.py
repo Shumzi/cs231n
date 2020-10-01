@@ -2,7 +2,6 @@ from builtins import range
 import numpy as np
 
 
-
 def affine_forward(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
@@ -27,9 +26,9 @@ def affine_forward(x, w, b):
     # will need to reshape the input into rows.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    x_rav = x.reshape(x.shape[0],-1)
-    out = x_rav@w + b
-    
+    x_rav = x.reshape(x.shape[0], -1)
+    out = x_rav @ w + b
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -60,10 +59,10 @@ def affine_backward(dout, cache):
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    N,M = dout.shape
+    N, M = dout.shape
     db = dout.sum(axis=0)
-    dw = x.reshape(x.shape[0],-1).T@dout
-    dx = (dout@w.T).reshape(x.shape)
+    dw = x.reshape(x.shape[0], -1).T @ dout
+    dx = (dout @ w.T).reshape(x.shape)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -89,7 +88,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    out = np.maximum(0,x)
+    out = np.maximum(0, x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -116,7 +115,7 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    dx = dout*(x > 0)
+    dx = dout * (x > 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -196,13 +195,14 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         # based on algo. 1 of bn paper.
-        sample_mean = x.sum(axis=0) / N
+        sample_mean = x.mean(axis=0)
         running_mean = running_mean * momentum + (1 - momentum) * sample_mean
-        sample_var = ((x - sample_mean) ** 2).sum(axis=0) / N
+        sample_var = x.var(axis=0)
         running_var = running_var * momentum + (1 - momentum) * sample_var
-        x_norm = (x - sample_mean) / (np.sqrt(sample_var + eps))
+        std = np.sqrt(sample_var + eps)
+        x_norm = (x - sample_mean) / std
         out = gamma * x_norm + beta
-        cache = (sample_mean, sample_var, eps, x, x_norm, gamma)  # note we don't need beta for grad computation.
+        cache = (sample_mean, std, x, x_norm, gamma)  # note we don't need beta for grad computation.
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -258,23 +258,23 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     # init variables
-    N,D = dout.shape
-    sample_mean, sample_var, eps, x, x_norm, gamma = cache
+    N = dout.shape[0]
+    sample_mean, std, x, x_norm, gamma = cache
     # stage 1 in bn backprop
-    dgamma = (dout * x_norm).sum(axis = 0)
+    dgamma = (dout * x_norm).sum(axis=0)
     dbeta = dout.sum(axis=0)
     dx_norm = dout * gamma
     # init variables for stage 2
-    x_dist_from_mean = (x - sample_mean) # nom of x_norm
-    denominator = 1/np.sqrt(sample_var+eps) # denom of x_norm.
+    x_dist_from_mean = (x - sample_mean)  # nom of x_norm
+    denominator = 1 / std  # denom of x_norm.
     # stage 2 in bn backprop.
-    dvar = (dx_norm*x_dist_from_mean).sum(axis=0)
-    dvar *= -0.5*(denominator**3)
+    dvar = (dx_norm * x_dist_from_mean).sum(axis=0)
+    dvar *= -0.5 * (denominator ** 3)
     dmean = -dx_norm.sum(axis=0) * denominator
-    dmean += dvar*2*x_dist_from_mean.sum(axis=0)/N
-    dx = dx_norm*denominator
-    dx += dmean/N
-    dx += (2/N)*dvar*x_dist_from_mean
+    dmean += dvar * 2 * x_dist_from_mean.sum(axis=0) / N
+    dx = dx_norm * denominator
+    dx += dmean / N
+    dx += (2 / N) * dvar * x_dist_from_mean
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -311,12 +311,12 @@ def batchnorm_backward_alt(dout, cache):
     # after **much** derivations and help from kevin zaka
     # https://kevinzakka.github.io/2016/09/14/batch_normalization/
     # we did it.
-    _, sample_var, eps, _, x_norm, gamma = cache
+    _, std, _, x_norm, gamma = cache
     N = dout.shape[0]
     dgamma = (dout * x_norm).sum(axis=0)
     dbeta = dout.sum(axis=0)
     dy = dout * gamma
-    common_factor = 1/(N*np.sqrt(sample_var+eps))
+    common_factor = 1 / (N * std)
     dx = common_factor * (N * dy - x_norm * ((dy * x_norm).sum(axis=0)) - dy.sum(axis=0))
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -332,7 +332,7 @@ def layernorm_forward(x, gamma, beta, ln_param):
 
     During both training and test-time, the incoming data is normalized per data-point,
     before being scaled by gamma and beta parameters identical to that of batch normalization.
-    
+
     Note that in contrast to batch normalization, the behavior during train and test-time for
     layer normalization are identical, and we do not need to keep track of running averages
     of any sort.
@@ -362,8 +362,13 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    # x, gamma, beta, ln_param
+    mu = x.mean(axis=1, keepdims=True)
+    var = x.var(axis=1, keepdims=True)
+    std = np.sqrt(var + eps)
+    x_norm = (x - mu) / std
+    out = gamma * x_norm + beta
+    cache = (mu, std, x, x_norm, gamma)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -397,8 +402,13 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    _, std, _, x_norm, gamma = cache
+    D = dout.shape[1]
+    dgamma = (dout * x_norm).sum(axis=0)
+    dbeta = dout.sum(axis=0)
+    dy = dout * gamma
+    common_factor = 1 / (D * std)
+    dx = common_factor * (D * dy - x_norm * ((dy * x_norm).sum(axis=1, keepdims=True)) - dy.sum(axis=1, keepdims=True))
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -446,7 +456,8 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        mask = (np.random.rand(*x.shape) < p) / p
+        out = x * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -458,7 +469,7 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out = x
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -489,7 +500,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dx = dout * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -534,9 +545,28 @@ def conv_forward_naive(x, w, b, conv_param):
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    n, c, hx, wx = x.shape
+    f, _, hh, ww = w.shape
+    h_out = 1 + (hx + 2 * pad - hh) // stride
+    w_out = 1 + (wx + 2 * pad - ww) // stride
+    out = np.zeros((n, f, h_out, w_out))
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    for example in range(n):
+        for filt in range(f):
+            for sliding_h in range(h_out):
+                for sliding_w in range(w_out):
+                    h_start = stride * sliding_h
+                    w_start = stride * sliding_w
+                    # print('x shape: ', x_pad.shape,
+                    #       'xslide shape: ', x_pad[example, :, h_start: h_start + hh, w_start:w_start + ww].shape,
+                    #       'w shape: ', w.shape)
+                    out[example, filt, sliding_h, sliding_w] = \
+                        np.vdot(x_pad[example, :, h_start: h_start + hh, w_start:w_start + ww],
+                                w[filt])
+    out += b[None, :, None, None]
+    # np.tensordot(x_pad,w,axes=([], []))
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -564,8 +594,37 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # db is just sum of its layer dout.
+    # since every pixel layer is Wx + b.
 
+    x, w, b, conv_param = cache
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    n, c, hx, wx = x.shape
+    f, _, hh, ww = w.shape
+    h_out, w_out = dout.shape[2: 4]
+    dw = np.zeros(w.shape)
+    dx = np.zeros(x.shape)
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    dx_pad = np.zeros(x_pad.shape)
+    for example in range(n):
+        for filt in range(f):
+            for sliding_h in range(h_out):
+                for sliding_w in range(w_out):
+                    h_start = stride * sliding_h
+                    w_start = stride * sliding_w
+                    # point in out = w * x[area of dout] + b. so, for that point,
+                    # dw = dout_point * x[area of dout], and
+                    # x[area of dout] = dw * dout_point. just like the usual.
+                    dw[filt] += x_pad[example, :, h_start: h_start + hh, w_start:w_start + ww] * dout[
+                        example, filt, sliding_h, sliding_w]
+                    dx_pad[example, :, h_start: h_start + hh, w_start:w_start + ww] += w[filt] * dout[
+                        example, filt, sliding_h, sliding_w]
+    dx += dx_pad[:, :, pad:-pad, pad:-pad]  # we only really care about the non-padded derivative.
+    db = dout.sum(axis=(0, 2, 3))  # effectively collapsing all dims except the out channels,
+    # which each bias value affects respectively
+    print(dx.shape)
+    print(dx_pad.shape)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -598,7 +657,21 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    stride = pool_param['stride']
+    n, c, hx, wx = x.shape
+    pool_height, pool_width = pool_param['pool_height'], pool_param['pool_width']
+    h_out = 1 + (hx - pool_height) // stride
+    w_out = 1 + (wx - pool_width) // stride
+    out = np.zeros((n, c, h_out, w_out))
+    for sliding_h in range(h_out):
+        for sliding_w in range(w_out):
+            h_start = stride * sliding_h
+            w_start = stride * sliding_w
+            # print('x shape: ', x_pad.shape,
+            #       'xslide shape: ', x_pad[example, :, h_start: h_start + hh, w_start:w_start + ww].shape,
+            #       'w shape: ', w.shape)
+            out[:, :, sliding_h, sliding_w] = \
+                x[:, :, h_start: h_start + pool_height, w_start:w_start + pool_width].max(axis=(2, 3))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -625,7 +698,23 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, pool_param = cache
+    stride = pool_param['stride']
+    x_rav = x.reshape[x.shape[0],x.shape[1],-1]
+    pool_height, pool_width = pool_param['pool_height'], pool_param['pool_width']
+    h_out, w_out = dout.shape[2:4]
+    dx = np.zeros(x.shape)
+    for sliding_h in range(h_out):
+        for sliding_w in range(w_out):
+            h_start = stride * sliding_h
+            w_start = stride * sliding_w
+            # print('x shape: ', x_pad.shape,
+            #       'xslide shape: ', x_pad[example, :, h_start: h_start + hh, w_start:w_start + ww].shape,
+            #       'w shape: ', w.shape)
+            idxs = x[:, :, h_start: h_start + pool_height, w_start:w_start + pool_width].reshape(x.shape[0], x.shape[1],-1).argmax(axis=2).
+            dx[:, :, sliding_h, sliding_w] += \
+
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
