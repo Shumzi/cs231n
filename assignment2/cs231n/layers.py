@@ -705,25 +705,17 @@ def max_pool_backward_naive(dout, cache):
     h_out, w_out = dout.shape[2:4]
     dx = np.zeros(x.shape)
     n, c = dx.shape[0:2]
-    # ew, gross.
-    # per pixel output, get
+    # per pixel depth for each example, get max args.
     for example in range(n):
-        for channel in range(c):
-            for sliding_h in range(h_out):
-                for sliding_w in range(w_out):
-                    h_start = stride * sliding_h
-                    w_start = stride * sliding_w
-                    idx = x[example, channel, h_start: h_start + pool_height,
-                          w_start:w_start + pool_width].ravel().argmax()  # no multi dim argmax, so stuck with ugly sol.
-                    idx = np.unravel_index(idx, (pool_height, pool_width))
-                    dx[example, channel, h_start + idx[0], w_start + idx[1]] = dout[
-                        example, channel, sliding_h, sliding_w]
-                    # print('x shape: ', x_pad.shape,
-                    #       'xslide shape: ', x_pad[example, :, h_start: h_start + hh, w_start:w_start + ww].shape,
-                    #       'w shape: ', w.shape)
-                    # idxs = x[:, :, h_start: h_start + pool_height, w_start:w_start + pool_width].reshape(x.shape[0],
-                    # x.shape[1],-1).argmax(axis=2).
-                    # dx[range(n), range(c), sliding_h, sliding_w] += \
+        for sliding_h in range(h_out):
+            for sliding_w in range(w_out):
+                h_start = stride * sliding_h
+                w_start = stride * sliding_w
+                idx = x[example, :, h_start: h_start + pool_height,
+                      w_start:w_start + pool_width].reshape(c, -1).argmax(axis=1)
+                idx = np.unravel_index(idx, (pool_height, pool_width))
+                dx[example, range(c), h_start + idx[0], w_start + idx[1]] = dout[
+                    example, :, sliding_h, sliding_w]
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
