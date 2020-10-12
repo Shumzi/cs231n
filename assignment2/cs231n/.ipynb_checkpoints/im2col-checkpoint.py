@@ -44,7 +44,7 @@ def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stri
     x_padded = np.zeros((N, C, H_padded, W_padded), dtype=cols.dtype)
     k, i, j = get_im2col_indices(x_shape, field_height, field_width, padding, stride)
     cols_reshaped = cols.reshape(C * field_height * field_width, -1, N)
-    cols_reshaped = cols_reshaped.transpose((2, 0, 1))
+    cols_reshaped = cols_reshaped.transpose(2, 0, 1)
     np.add.at(x_padded, (slice(None), k, i, j), cols_reshaped)
     if padding == 0:
         return x_padded

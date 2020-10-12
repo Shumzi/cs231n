@@ -64,6 +64,8 @@ class TwoLayerNet(object):
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
+    def l2(self, w):
+        return (self.reg * 0.5 * w**2).sum()
 
     def loss(self, X, y=None):
         """
@@ -98,10 +100,10 @@ class TwoLayerNet(object):
         W2 = self.params['W2']
         b2 = self.params['b2']
         z1, cache['affine1'] = affine_forward(X, W1, b1)
-        reg_loss += 0.5 * reg * (W1 ** 2).sum()
+        reg_loss += self.l2(W1)
         a1, cache['relu1'] = relu_forward(z1)
         z2, cache['affine2'] = affine_forward(a1, W2, b2)
-        reg_loss += 0.5 * reg * (W2 ** 2).sum()
+        reg_loss += self.l2(W2)
         scores = z2
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
