@@ -4,7 +4,7 @@ import torchvision.transforms as T
 import numpy as np
 from .image_utils import SQUEEZENET_MEAN, SQUEEZENET_STD
 from scipy.ndimage.filters import gaussian_filter1d
-
+from torch.nn.functional import cross_entropy
 def compute_saliency_maps(X, y, model):
     """
     Compute a class saliency map using the model for images X and labels y.
@@ -34,7 +34,13 @@ def compute_saliency_maps(X, y, model):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    scores = model(X)
+    print(scores.shape,y.shape)
+    correct_scores = scores.gather(1, y.view(-1, 1)).squeeze().sum()
+    print(correct_scores)
+    correct_scores.backward()
+    saliency = X.grad.max(1)[0]
+    print(saliency.shape)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -75,8 +81,23 @@ def make_fooling_image(X, target_y, model):
     # You can print your progress over iterations to check your algorithm.       #
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    num_iter = 100
+    for i in range(num_iter):
+#         print("x fool shape: ",X_fooling.shape)
+        scores = model(X_fooling).squeeze()
+#         print("scores shape: ",scores.shape)
+        fake_score = scores[target_y]
+        if(target_y == scores.argmax()):
+            print("fooled on iter %d. stopping with score: %d" % (i,fake_score))
+            break
+        if i%10==9:
+            print("iter %d/%d, fake score vs highest score: %f vs %f" % (i,num_iter,fake_score,scores.max()))
+        fake_score.backward()
+        norm = X_fooling.grad.norm()
+        dx = learning_rate * X_fooling.grad / norm
+        with torch.no_grad():
+            X_fooling += dx
+            X_fooling.grad.zero_()
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -94,8 +115,14 @@ def class_visualization_update_step(img, model, target_y, l2_reg, learning_rate)
     ########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    scores = model(img).squeeze()
+    target_score = scores[target_y]
+#     print(target_score.item())
+    target_score.backward()
+    with torch.no_grad():
+        # wouldn't you want to divide by norm?
+        img += learning_rate * (img.grad - l2_reg * img.grad.norm()) 
+        img.grad.zero_()
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ########################################################################
     #                             END OF YOUR CODE                         #
